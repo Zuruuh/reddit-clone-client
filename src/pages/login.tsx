@@ -1,50 +1,53 @@
 import React from "react";
 import { Form, Formik, FormikHelpers } from "formik";
-import Wrapper from "../components/Wrapper";
 import InputField from "../components/InputField";
-import { Box, Button } from "@chakra-ui/react";
+import { Box, Button, Flex, Link } from "@chakra-ui/react";
 import { useLoginMutation } from "../generated/graphql";
 import { toErrorMap } from "../utils/toErrorMap";
 import { useRouter } from "next/router";
 import { createUrqlClient } from "../utils/createUrqlClient";
 import { withUrqlClient } from "next-urql";
+import type { AuthInterface } from "../types";
+import NextLink from "next/link";
+import Page from "../components/layout/Page";
+import { useAnonymousPage } from "../hooks/useAnonymousPage";
 
 interface registerProps {}
 
-interface AuthInterface {
-  username: string;
-  password: string;
-}
-
 const Login: React.FC<registerProps> = ({}) => {
-  const [{}, login] = useLoginMutation();
+  useAnonymousPage();
+  const [, login] = useLoginMutation();
   const router = useRouter();
   const handleInput = async (
     values: AuthInterface,
     { setErrors }: FormikHelpers<AuthInterface>
   ) => {
-    const response = await login({ options: values });
+    const response = await login(values);
     if (response.data?.login.errors) {
       setErrors(toErrorMap(response.data.login.errors));
     } else if (response.data?.login.user) {
       // * Auth successful
-      router.push("/");
+      if (typeof router.query.next === "string") {
+        router.push(router.query.next);
+      } else {
+        router.push("/");
+      }
     }
   };
   return (
-    <Wrapper variant="small">
+    <Page variant="small">
       <Formik
-        initialValues={{ username: "", password: "" } as AuthInterface}
+        initialValues={{ usernameOrEmail: "", password: "" } as AuthInterface}
         onSubmit={async (values, form) => {
-          handleInput(values, form);
+          await handleInput(values, form);
         }}
       >
         {({ isSubmitting }) => (
           <Form>
             <InputField
-              name="username"
-              placeholder="Username"
-              label="Username"
+              name="usernameOrEmail"
+              placeholder="Username or Email"
+              label="Username or Email"
             />
             <Box my={4}>
               <InputField
@@ -54,13 +57,21 @@ const Login: React.FC<registerProps> = ({}) => {
                 type="password"
               />
             </Box>
+            <Flex>
+              <span>Forgot your password ?</span>
+              <Box ml={2}>
+                <NextLink href="/forgot-password">
+                  <Link>Click here</Link>
+                </NextLink>
+              </Box>
+            </Flex>
             <Button isLoading={isSubmitting} type="submit" colorScheme="teal">
               Login
             </Button>
           </Form>
         )}
       </Formik>
-    </Wrapper>
+    </Page>
   );
 };
 export default withUrqlClient(createUrqlClient, { ssr: true })(Login);

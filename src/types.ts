@@ -1,4 +1,9 @@
 export interface AuthInterface {
-  username: string;
+  usernameOrEmail: string;
   password: string;
+}
+
+export interface PostInterface {
+  title: string;
+  content: string;
 }
